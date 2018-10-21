@@ -12,33 +12,62 @@ defmodule Project3 do
   def main(args) do
     numNodes = Enum.at(args, 0) |> String.to_integer()
     # requests = Enum.at(args, 1)
-    pids = createNodes(numNodes)
+
     # IO.inspect(pids)
+    bits = (:math.log2(numNodes) / 4)  |> Float.ceil |> round()
+    m = 4*(bits+1)
+    pids = createNodes(numNodes,bits)
     table = createTable(pids)
     IO.inspect table
     successor(table, numNodes)
-    Enum.each(pids, fn x->
-      a = get_state(x)
-      IO.inspect a
-    end)
-
+    # Enum.each(pids, fn x->
+    #   a = get_state(x)
+    #   IO.inspect a
+    # end)
+    createAllFingers(table,m)
   end
 
-  def createNodes(numNodes) do
+  def createNodes(numNodes,bits) do
     Enum.map((1..numNodes), fn x ->
       {:ok, pid} = start_link()
       s = Integer.to_string(x)
       a = :crypto.hash(:sha, s) |> Base.encode16
-      bits = :math.ceil(:math.log(numNodes) / 4) |> round()
+
       # IO.puts "Number of bits are : #{bits}"
-      {b, _} = String.slice(a, 0..(bits-1)) |> Integer.parse(16)
+      {b, _} = String.slice(a, 0..bits) |> Integer.parse(16)
       set_state(pid, b)
       pid
     end)
   end
 
+  def createAllFingers(table,m) do
+    Enum.each(table, fn x ->
+      {id,pid} = x
+      temp_list = Enum.map(0..(m-1), fn x ->
+        num = (id + :math.pow(2,x))|>round
+        den = :math.pow(2,m)|>round
+        value = rem(num,den)|>round
+        # IO.puts value
+      end)
+      fingerTable = Enum.map(temp_list, fn x ->
+        a = Enum.find(table,fn y->
+           {id , pid} = y
+           id >= x
+        end)
+        b =
+          if a == nil do
+            Enum.at(table,0)
+          else
+            a
+          end
+        b
+      end)
+      GenServer.call(pid,{:sendFingers, fingerTable})
+    end)
+  end
+
   def successor(table, numNodes) do
-    Enum.map(0..numNodes-2, fn x -> 
+    Enum.map(0..numNodes-2, fn x ->
       {_, a} = Enum.at(table, x)
       {_, b} = Enum.at(table, x+1)
       set_successor(a, b)
@@ -58,6 +87,14 @@ defmodule Project3 do
     {:reply, b, state}
   end
 
+  def handle_call({:sendFingers, fingerTable}, _from, state) do
+    {id, succ, _, hops} = state
+    state = {id, succ,fingerTable, hops}
+    IO.inspect id
+    IO.inspect fingerTable
+    {:reply, fingerTable, state}
+  end
+
   def get_state(pid) do
     GenServer.call(pid, {:get_state})
   end
@@ -68,7 +105,7 @@ defmodule Project3 do
   end
 
   def createTable(pids) do
-    ids = Enum.map(pids, fn x -> 
+    ids = Enum.map(pids, fn x ->
       getID(x)
     end)
     table = Enum.zip(ids, pids) |> Enum.sort()
