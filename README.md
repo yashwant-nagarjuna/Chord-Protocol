@@ -2,8 +2,8 @@
 <h2 align = "center" > Project-3 </h2>
 
 <p> <b>Submitted by: </b> <br/>
-Student Name: Yashwant Nagarjuna Kuppa UFID: 7181-4301 <br/>
-Student Name: Mokal Pranav UFID: 6812-1781<br/>
+Student Name: Yashwant Nagarjuna Kuppa <br/>
+Student Name: Mokal Pranav <br/>
 No. of Group member(s): 2 <br/> </p>
 
 ## What is working?
